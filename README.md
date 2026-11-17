@@ -144,3 +144,7 @@ guardan solo en tu equipo, en la carpeta `scans/`, que queda fuera del control d
 
 Usa esta herramienta solo sobre redes y equipos propios o para los que tengas autorizacion
 expresa. El escaneo de sistemas ajenos sin permiso puede ser ilegal.
+
+## Licencia
+
+Publicado bajo la licencia [MIT](LICENSE).
