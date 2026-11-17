@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>nmap Visual</title>
+  <link rel="stylesheet" href="styles.css?v=25">
+</head>
+<body>
+  <div id="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <span class="brand-mark">nmap</span>
+        <span class="brand-sub">Visual</span>
+      </div>
+
+      <div class="env" id="env-panel">
+        <div class="env-row" id="env-nmap">Comprobando entorno...</div>
+      </div>
+
+      <div class="project-bar">
+        <span class="project-label">Proyecto</span>
+        <select id="project-select" title="Proyecto activo"></select>
+        <button class="btn-ghost" id="new-project-btn" title="Nuevo proyecto">+</button>
+        <button class="btn-ghost" id="del-project-btn" title="Borrar proyecto">&times;</button>
+      </div>
+
+      <div class="history">
+        <div class="history-head">
+          <span>Historial</span>
+          <div class="history-actions">
+            <button class="btn-ghost" id="refresh-history" title="Actualizar">&#8635;</button>
+            <button class="btn-ghost" id="compare-btn" title="Comparar dos escaneos">comparar</button>
+            <button class="btn-ghost" id="clear-history" title="Borrar todo el historial">limpiar</button>
+          </div>
+        </div>
+        <ul class="history-list" id="history-list"></ul>
+      </div>
+
+      <div class="sidebar-foot">
+        <button class="btn-quit" id="quit-btn" title="Cierra el servidor local">Apagar servidor</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <section class="controls">
+        <div class="field target-field">
+          <label for="target">Objetivo</label>
+          <input type="text" id="target" placeholder="192.168.1.0/24  scanme.nmap.org  10.0.0.1-50" autocomplete="off">
+        </div>
+
+        <div class="field profile-field">
+          <label for="profile">Plantilla</label>
+          <select id="profile"></select>
+        </div>
+
+        <div class="field args-field">
+          <label for="args">Argumentos de nmap</label>
+          <input type="text" id="args" placeholder="-T4 -F" autocomplete="off" spellcheck="false">
+        </div>
+
+        <div class="actions">
+          <button class="btn-primary" id="start-btn">Iniciar escaneo</button>
+          <button class="btn-danger" id="stop-btn" disabled>Detener</button>
+        </div>
+      </section>
+
+      <section class="quick-actions">
+        <button class="btn-net" id="scan-network-btn">Escanear mi red</button>
+        <button class="btn-ghost-outline" id="flags-btn">Banderas y que hace cada una</button>
+        <button class="btn-ghost-outline" id="subnet-btn">Calculadora de subred</button>
+        <button class="btn-ghost-outline" id="ports-btn">Puertos y riesgos</button>
+        <button class="btn-ghost-outline" id="commands-btn">Comandos de terminal</button>
+        <button class="btn-ghost-outline" id="hostnames-btn">Nombres sin DNS</button>
+        <button class="btn-ghost-outline" id="save-profile-btn">Guardar como plantilla</button>
+        <button class="btn-ghost-outline btn-del-profile" id="delete-profile-btn" hidden>Borrar plantilla</button>
+        <label class="seq-toggle" title="Escanea los equipos uno por uno y muestra cada uno al terminar, en vez de esperar al escaneo completo">
+          <input type="checkbox" id="sequential-mode"> Secuencial (equipo por equipo)
+        </label>
+        <span class="net-hint" id="net-hint"></span>
+      </section>
+
+      <p class="profile-desc" id="profile-desc"></p>
+
+      <section class="command-preview">
+        <span class="cmd-label">Comando</span>
+        <code id="command-text">nmap -T4 -F -v --stats-every 2s ...</code>
+        <button class="btn-copy" id="copy-cmd-btn" title="Copiar comando">copiar</button>
+      </section>
+
+      <section class="status-bar">
+        <div class="progress-wrap">
+          <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+          <div class="progress-meta">
+            <span id="progress-text">Sin actividad</span>
+            <span id="progress-eta"></span>
+          </div>
+        </div>
+        <div class="status-chip" id="status-chip">en espera</div>
+      </section>
+
+      <div class="panels">
+        <section class="panel hosts-panel">
+          <div class="panel-head">
+            <h2>Hosts</h2>
+            <div class="panel-tools">
+              <button class="btn-ghost" id="use-hosts-btn" title="Poner todos los equipos encontrados como objetivo del proximo escaneo" hidden>usar como objetivo</button>
+              <button class="btn-ghost" id="reuse-config-btn" title="Cargar el objetivo y argumentos de este escaneo para repetirlo" hidden>usar config</button>
+              <button class="btn-ghost" id="graph-btn" title="Ver grafo de la red">grafo</button>
+              <span class="counter" id="host-counter">0</span>
+              <div class="downloads" id="downloads" hidden>
+                <span class="dl-label">Descargar:</span>
+                <a id="dl-xml" href="#" download>XML</a>
+                <a id="dl-nmap" href="#" download>nmap</a>
+                <a id="dl-gnmap" href="#" download>gnmap</a>
+              </div>
+            </div>
+          </div>
+          <div class="host-filter" id="host-filter" hidden>
+            <input type="text" id="host-search" placeholder="Filtrar por IP, servicio, fabricante, puerto..." autocomplete="off">
+            <select id="host-sort" title="Ordenar">
+              <option value="ip">Orden: IP</option>
+              <option value="ports">Mas puertos</option>
+              <option value="risk">Riesgo primero</option>
+              <option value="vendor">Fabricante</option>
+            </select>
+            <button class="chip-toggle" id="filter-open">Con puertos</button>
+            <button class="chip-toggle" id="filter-risk">Revisar</button>
+          </div>
+          <div class="hosts" id="hosts"></div>
+          <div class="empty" id="hosts-empty">Los resultados apareceran aqui a medida que nmap los descubra.</div>
+        </section>
+
+        <aside class="side-panels">
+          <section class="panel diag-panel">
+            <div class="panel-head">
+              <h2>Diagnostico</h2>
+              <span class="counter" id="diag-counter">0</span>
+            </div>
+            <div class="diagnostics" id="diagnostics"></div>
+            <div class="empty" id="diag-empty">Sin incidencias detectadas.</div>
+          </section>
+
+          <section class="panel log-panel">
+            <div class="panel-head">
+              <h2>Registro en vivo</h2>
+              <button class="btn-ghost" id="clear-log" title="Limpiar vista">limpiar</button>
+            </div>
+            <pre class="log" id="log"></pre>
+          </section>
+        </aside>
+      </div>
+    </main>
+  </div>
+
+  <div class="toast" id="toast" hidden></div>
+
+  <div class="modal-overlay" id="graph-modal" hidden>
+    <div class="modal modal-wide">
+      <div class="modal-head">
+        <h2>Grafo de la red</h2>
+        <button class="modal-close" id="graph-close" title="Cerrar">&times;</button>
+      </div>
+      <div class="graph-wrap" id="graph-wrap"></div>
+      <div class="graph-legend">
+        <span><i class="lg lg-risk"></i> conviene revisar</span>
+        <span><i class="lg lg-open"></i> con puertos abiertos</span>
+        <span><i class="lg lg-up"></i> activo sin puertos</span>
+        <span><i class="lg lg-hub"></i> red / puerta de enlace</span>
+        <span class="graph-hint">Pasa el cursor por un nodo para ver detalles.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="compare-modal" hidden>
+    <div class="modal modal-wide">
+      <div class="modal-head">
+        <h2>Comparar escaneos</h2>
+        <button class="modal-close" id="compare-close" title="Cerrar">&times;</button>
+      </div>
+      <div class="compare-pickers">
+        <label class="cmp-field">Antes <select id="compare-a"></select></label>
+        <label class="cmp-field">Despues <select id="compare-b"></select></label>
+        <button class="btn-primary" id="compare-run">Comparar</button>
+      </div>
+      <div class="compare-body" id="compare-body">
+        <p class="graph-empty">Elige dos escaneos y pulsa Comparar.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="subnet-modal" hidden>
+    <div class="modal">
+      <div class="modal-head">
+        <h2>Calculadora de subred</h2>
+        <button class="modal-close" id="subnet-close" title="Cerrar">&times;</button>
+      </div>
+      <div class="subnet-body">
+        <div class="subnet-input">
+          <input type="text" id="subnet-cidr" placeholder="192.168.1.0/24" autocomplete="off" spellcheck="false">
+          <button class="btn-primary" id="subnet-calc">Calcular</button>
+        </div>
+        <p class="subnet-err" id="subnet-err" hidden></p>
+        <table class="subnet-table" id="subnet-result" hidden>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="ports-modal" hidden>
+    <div class="modal">
+      <div class="modal-head">
+        <h2>Puertos y riesgos</h2>
+        <button class="modal-close" id="ports-close" title="Cerrar">&times;</button>
+      </div>
+      <div class="modal-search">
+        <input type="text" id="ports-search" placeholder="Buscar por puerto, servicio o palabra (ssh, 3389, base de datos)..." autocomplete="off">
+        <span class="modal-hint">Pulsa el numero de un puerto para anadirlo al comando. Que corre en cada uno, por que vigilarlo y como asegurarlo.</span>
+      </div>
+      <details class="states-help">
+        <summary>Que significan los estados de un puerto</summary>
+        <div class="states-grid">
+          <div class="state-row"><span class="state-name st-open">open</span><span>Hay una aplicacion escuchando y acepta conexiones. El puerto esta abierto; no garantiza que el servicio responda bien (eso lo confirma -sV y los scripts).</span></div>
+          <div class="state-row"><span class="state-name st-closed">closed</span><span>El puerto responde pero no hay nada escuchando. El equipo esta activo y ese puerto no tiene servicio.</span></div>
+          <div class="state-row"><span class="state-name st-filtered">filtered</span><span>Un cortafuegos o filtro bloquea el acceso. nmap no recibe respuesta clara y no puede saber si esta abierto.</span></div>
+          <div class="state-row"><span class="state-name st-unfiltered">unfiltered</span><span>El puerto es accesible (no hay filtro), pero nmap no puede decidir si esta abierto o cerrado. Tipico del escaneo ACK (-sA).</span></div>
+          <div class="state-row"><span class="state-name st-mix">open|filtered</span><span>nmap no distingue entre abierto y filtrado porque no hubo respuesta. Comun en UDP y en escaneos sigilosos.</span></div>
+          <div class="state-row"><span class="state-name st-mix">closed|filtered</span><span>nmap no distingue entre cerrado y filtrado. Aparece sobre todo con el escaneo inactivo (idle scan).</span></div>
+          <div class="state-row"><span class="state-name st-wrapped">tcpwrapped</span><span>Con -sV: el puerto abre la conexion pero el servicio la cierra sin responder. Puerto abierto, servicio no disponible o protegido.</span></div>
+        </div>
+        <p class="states-note">Puerto abierto es solo que la conexion se acepta. Para saber si el servicio responde de verdad, escanea con -sV (columna Version) y con scripts (-sC).</p>
+      </details>
+      <div class="modal-body" id="ports-body"></div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="hostnames-modal" hidden>
+    <div class="modal modal-wide">
+      <div class="modal-head">
+        <h2>Encontrar nombres de equipo sin DNS</h2>
+        <button class="modal-close" id="hostnames-close" title="Cerrar">&times;</button>
+      </div>
+      <div class="modal-search">
+        <span class="modal-hint">En una red local muchos equipos no tienen registro DNS pero anuncian su nombre por otros medios. Pulsa un script para anadirlo al comando.</span>
+      </div>
+      <div class="modal-body">
+        <table class="hn-table">
+          <thead><tr><th>Via</th><th>Puerto</th><th>Que obtienes</th><th>Anadir</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="hn-via">DNS inverso (PTR)</td><td class="hn-port">-</td>
+              <td>Nombre si el equipo tiene registro inverso. Fuerza la consulta aunque parezca caido.</td>
+              <td><button class="hn-add" data-flag="-R">-R</button></td>
+            </tr>
+            <tr>
+              <td class="hn-via">NetBIOS</td><td class="hn-port">137/udp</td>
+              <td>Nombre de equipo y dominio en sistemas Windows.</td>
+              <td><button class="hn-add" data-script="nbstat">nbstat</button></td>
+            </tr>
+            <tr>
+              <td class="hn-via">mDNS / Bonjour</td><td class="hn-port">5353/udp</td>
+              <td>Nombre .local y servicios. Tipico de Apple, impresoras e IoT.</td>
+              <td><button class="hn-add" data-script="dns-service-discovery">dns-service-discovery</button></td>
+            </tr>
+            <tr>
+              <td class="hn-via">SMB</td><td class="hn-port">139, 445/tcp</td>
+              <td>Nombre de equipo, dominio y sistema operativo.</td>
+              <td><button class="hn-add" data-script="smb-os-discovery">smb-os-discovery</button></td>
+            </tr>
+            <tr>
+              <td class="hn-via">SNMP</td><td class="hn-port">161/udp</td>
+              <td>Nombre del sistema (sysName) si conoces la comunidad, a menudo public.</td>
+              <td><button class="hn-add" data-script="snmp-info">snmp-info</button></td>
+            </tr>
+            <tr>
+              <td class="hn-via">UPnP / SSDP</td><td class="hn-port">1900/udp</td>
+              <td>Descripcion del dispositivo, que suele incluir un nombre.</td>
+              <td><button class="hn-add" data-script="upnp-info">upnp-info</button></td>
+            </tr>
+            <tr>
+              <td class="hn-via">Certificado TLS</td><td class="hn-port">443/tcp</td>
+              <td>El nombre (CN o SAN) del certificado de un servicio HTTPS.</td>
+              <td><button class="hn-add" data-script="ssl-cert">ssl-cert</button></td>
+            </tr>
+            <tr>
+              <td class="hn-via">LLMNR</td><td class="hn-port">5355/udp</td>
+              <td>Resolucion de nombres local de Windows. Sin un script directo en nmap.</td>
+              <td class="hn-na">-</td>
+            </tr>
+            <tr>
+              <td class="hn-via">DHCP</td><td class="hn-port">-</td>
+              <td>El nombre que el equipo da al pedir IP. Se ve en el router o servidor DHCP, no con nmap.</td>
+              <td class="hn-na">-</td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="states-note">Atajo: para pedir varios a la vez usa un escaneo de descubrimiento con estos scripts, por ejemplo -sn con nbstat, dns-service-discovery y smb-os-discovery. Los nombres encontrados apareceran en el campo Nombre de cada equipo.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="commands-modal" hidden>
+    <div class="modal modal-wide">
+      <div class="modal-head">
+        <h2>Comandos de terminal</h2>
+        <button class="modal-close" id="commands-close" title="Cerrar">&times;</button>
+      </div>
+      <div class="os-tabs" id="os-tabs">
+        <button class="os-tab active" data-os="linux">Linux</button>
+        <button class="os-tab" data-os="macos">macOS</button>
+        <button class="os-tab" data-os="windows">Windows</button>
+      </div>
+      <div class="modal-search">
+        <input type="text" id="commands-search" placeholder="Buscar por comando, sintaxis, descripcion o categoria (red, ssh, firewall)..." autocomplete="off">
+        <span class="modal-hint" id="commands-hint">Comandos reales para Linux, macOS y Windows. Pulsa el nombre para copiar el ejemplo.</span>
+      </div>
+      <div class="modal-body" id="commands-body"></div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="flags-modal" hidden>
+    <div class="modal">
+      <div class="modal-head">
+        <h2>Banderas de nmap</h2>
+        <button class="modal-close" id="flags-close" title="Cerrar">&times;</button>
+      </div>
+      <div class="modal-search">
+        <input type="text" id="flags-search" placeholder="Buscar bandera o descripcion..." autocomplete="off">
+        <span class="modal-hint">Pulsa una bandera para anadirla al comando.</span>
+      </div>
+      <div class="modal-body" id="flags-body"></div>
+    </div>
+  </div>
+
+  <script src="ports.js?v=25"></script>
+  <script src="commands.js?v=25"></script>
+  <script src="app.js?v=25"></script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+.venv/
+__pycache__/
+*.pyc
+scans/*
+!scans/.gitkeep
+custom_profiles.json
+projects.json
+.env
